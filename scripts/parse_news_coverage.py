@@ -3,6 +3,11 @@
 Extract TV development / greenlights / renewals / cancellations from
 the latest Amazon Prime Video news coverage PDF and display them in a table.
 
+TODO: Refactor this script into a dynamic dashboard that surfaces insights
+about series pickups, renewals, greenlights and projects in development.
+The dashboard should help answer questions around deal sourcing, genre trends,
+creator experience levels and the mix of new vs. returning shows.
+
 Requirements
 ------------
 pip install pdfplumber pandas tabulate
