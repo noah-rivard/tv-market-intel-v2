@@ -52,4 +52,3 @@ Older Amazon Prime Video PDFs in `data/prime_video/` are scans without selectabl
 text. The parser skips these files and therefore currently extracts data only
 from digital PDFs. Adding OCR support would enable pulling data from the scanned
 documents as well.
-
