@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """
 Extract TV development / greenlights / renewals / cancellations from
-the latest Amazon Prime Video news coverage PDF and display them in a table.
+all available Amazon Prime Video news coverage PDFs and display them in a table.
+The script scans the ``data/prime_video`` folder for files named
+``*_Amazon_News_Coverage.pdf``. Some older PDFs are scans without selectable
+text, so they are skipped unless OCR is added.
+
+TODO: Refactor this script into a dynamic dashboard that surfaces insights
+about series pickups, renewals, greenlights and projects in development.
+The dashboard should help answer questions around deal sourcing, genre trends,
+creator experience levels and the mix of new vs. returning shows.
 
 TODO: Refactor this script into a dynamic dashboard that surfaces insights
 about series pickups, renewals, greenlights and projects in development.
@@ -19,12 +27,12 @@ import pandas as pd
 from tabulate import tabulate
 from pathlib import Path
 
-PDF_PATH = Path("data/prime_video/2025_Q1_Amazon_News_Coverage.pdf")
+PDF_DIR = Path("data/prime_video")
 OUTPUT_XLSX = Path("data") / "parsed_news_coverage.xlsx"
 
-# Determine the year from the filename (fallback to 2025 if not found)
-_match = re.search(r"(\d{4})", PDF_PATH.name)
-YEAR = _match.group(1) if _match else "2025"
+# Collect all news coverage PDFs in the Prime Video folder. Some older PDFs are
+# scans with no extractable text, so parsing them will yield zero results.
+PDF_PATHS = sorted(PDF_DIR.glob("*_Amazon_News_Coverage.pdf"))
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -59,61 +67,77 @@ VALID_MODES = {
 }
 
 # ---------------------------------------------------------------------------
-# Scrape the PDF
+# Scrape all PDFs
 # ---------------------------------------------------------------------------
 
 records = []
-mode = None
-inside_tv = False
 
-with pdfplumber.open(PDF_PATH) as pdf:
-    for page in pdf.pages:
-        text = page.extract_text()
-        if not text:
-            continue
-        for raw_line in text.splitlines():
-            line = raw_line.strip()
+def parse_pdf(path: Path) -> list[dict]:
+    """Return a list of item dicts parsed from a single PDF."""
+    year_match = re.search(r"(\d{4})", path.name)
+    year = year_match.group(1) if year_match else "2025"
 
-            # Enter / leave the TV section
-            if re.match(r"^TV$", line):
-                inside_tv = True
-                continue
-            if inside_tv and re.match(r"^(International|Sports|Deals|Strategy)", line):
-                inside_tv = False     # exited TV section
-                continue
-            if not inside_tv:
-                continue
+    _records = []
+    mode = None
+    inside_tv = False
 
-            # Detect subsection headers (bulleted with '•')
-            m_header = re.match(r"^•\s+(.*)$", line)
-            if m_header:
-                header = m_header.group(1).split(":")[0].strip()  # remove any tail
-                mode = header if header in VALID_MODES else None
+    with pdfplumber.open(path) as pdf:
+        pages_with_text = False
+        for page in pdf.pages:
+            text = page.extract_text()
+            if not text:
                 continue
+            pages_with_text = True
+            for raw_line in text.splitlines():
+                line = raw_line.strip()
 
-            # If we’re in a relevant subsection, try to parse an item line
-            if mode in VALID_MODES:
-                match = ITEM_RE.match(line)
-                if match:
-                    title = re.sub(r"\[.*?\]", "", match["title"]).strip()
-                    records.append(
-                        {
-                            "Title": title,
-                            "Season #": (match["season"] or "").lstrip("S"),
-                            "Platform": match["platform"].strip(),
-                            "Genre": match["genre"].strip(),
-                            "Date Announced": match["date"].strip(),
-                        }
-                    )
+                # Enter / leave the TV section
+                if re.match(r"^TV$", line):
+                    inside_tv = True
+                    continue
+                if inside_tv and re.match(r"^(International|Sports|Deals|Strategy)", line):
+                    inside_tv = False  # exited TV section
+                    continue
+                if not inside_tv:
+                    continue
+
+                # Detect subsection headers (bulleted with '•')
+                m_header = re.match(r"^•\s+(.*)$", line)
+                if m_header:
+                    header = m_header.group(1).split(":")[0].strip()
+                    mode = header if header in VALID_MODES else None
+                    continue
+
+                # If we’re in a relevant subsection, try to parse an item line
+                if mode in VALID_MODES:
+                    match = ITEM_RE.match(line)
+                    if match:
+                        title = re.sub(r"\[.*?\]", "", match["title"]).strip()
+                        _records.append(
+                            {
+                                "Title": title,
+                                "Season #": (match["season"] or "").lstrip("S"),
+                                "Platform": match["platform"].strip(),
+                                "Genre": match["genre"].strip(),
+                                "Date Announced": f"{match['date'].strip()}/{year}",
+                            }
+                        )
+
+    if not pages_with_text:
+        print(f"Warning: no extractable text in {path.name}, skipping")
+    return _records
+
+for path in PDF_PATHS:
+    records.extend(parse_pdf(path))
 
 # ---------------------------------------------------------------------------
 # Present results
 # ---------------------------------------------------------------------------
 
 df = pd.DataFrame(records)
-df = df.sort_values(
-    "Date Announced", key=lambda s: pd.to_datetime(s + f"/{YEAR}")
-)
+if not df.empty:
+    df["_sort_date"] = pd.to_datetime(df["Date Announced"], errors="coerce")
+    df = df.sort_values("_sort_date").drop(columns="_sort_date")
 
 df.to_excel(OUTPUT_XLSX, index=False)
 print(f"Saved results to {OUTPUT_XLSX}")

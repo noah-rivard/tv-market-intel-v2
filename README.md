@@ -46,3 +46,9 @@ This tool should eventually allow users to answer questions such as:
 
 These insights will be derived from parsed data on series pickups, renewals, greenlights and development activity.
 
+## Known Limitations
+
+Older Amazon Prime Video PDFs in `data/prime_video/` are scans without selectable
+text. The parser skips these files and therefore currently extracts data only
+from digital PDFs. Adding OCR support would enable pulling data from the scanned
+documents as well.
