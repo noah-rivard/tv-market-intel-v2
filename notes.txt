@@ -1,0 +1,91 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..7a60b85
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,2 @@
++__pycache__/
++*.pyc
+diff --git a/README.md b/README.md
+index 7e39514..7d051f0 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1,10 @@
+-# tv-market-intel
+\ No newline at end of file
++# TV Market Intel
++
++This project organizes research data about the television industry.
++Currently it focuses on Amazon Prime Video news coverage from the past
++12 months.  Raw PDFs and spreadsheets live in `data/` while Python
++scripts live in `src/`.
++
++Install dependencies with `pip install -r requirements.txt`.
++Run `python src/prime_video_analysis.py` to list the included data files.
++Future development will parse these files for strategic insights.
+diff --git a/2024 Q1 Amazon News Coverage.pdf b/data/2024 Q1 Amazon News Coverage.pdf
+similarity index 100%
+rename from 2024 Q1 Amazon News Coverage.pdf
+rename to data/2024 Q1 Amazon News Coverage.pdf
+diff --git a/2024 Q2 Amazon News Coverage.pdf b/data/2024 Q2 Amazon News Coverage.pdf
+similarity index 100%
+rename from 2024 Q2 Amazon News Coverage.pdf
+rename to data/2024 Q2 Amazon News Coverage.pdf
+diff --git a/2024 Q3 Amazon News Coverage.pdf b/data/2024 Q3 Amazon News Coverage.pdf
+similarity index 100%
+rename from 2024 Q3 Amazon News Coverage.pdf
+rename to data/2024 Q3 Amazon News Coverage.pdf
+diff --git a/2025 Q1 Amazon News Coverage.pdf b/data/2025 Q1 Amazon News Coverage.pdf
+similarity index 100%
+rename from 2025 Q1 Amazon News Coverage.pdf
+rename to data/2025 Q1 Amazon News Coverage.pdf
+diff --git a/Prime Video renewals in past 12 months b/data/prime_video_renewals.xlsx
+similarity index 100%
+rename from Prime Video renewals in past 12 months
+rename to data/prime_video_renewals.xlsx
+diff --git a/requirements.txt b/requirements.txt
+new file mode 100644
+index 0000000..0ea9ad4
+--- /dev/null
++++ b/requirements.txt
+@@ -0,0 +1,3 @@
++pandas
++pdfplumber
++tabulate
+diff --git a/src/__init__.py b/src/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/parse_news_coverage b/src/parse_news_coverage.py
+similarity index 100%
+rename from parse_news_coverage
+rename to src/parse_news_coverage.py
+diff --git a/src/prime_video_analysis.py b/src/prime_video_analysis.py
+new file mode 100644
+index 0000000..66c07f1
+--- /dev/null
++++ b/src/prime_video_analysis.py
+@@ -0,0 +1,21 @@
++"""Analyze Amazon Prime Video titles from recent news coverage."""
++from pathlib import Path
++import pandas as pd
++
++DATA_DIR = Path(__file__).resolve().parent.parent / "data"
++PDF_FILES = sorted(DATA_DIR.glob("20*Amazon News Coverage.pdf"))
++RENEWALS_FILE = DATA_DIR / "prime_video_renewals.xlsx"
++
++def main() -> None:
++    print("Prime Video data files:")
++    for pdf in PDF_FILES:
++        print(f"- {pdf.name}")
++    if RENEWALS_FILE.exists():
++        print(f"- {RENEWALS_FILE.name}")
++    else:
++        print("No renewals spreadsheet found")
++
++    # TODO: load PDFs and spreadsheet to create insights
++
++if __name__ == "__main__":
++    main()
+ 
+EOF
+)
